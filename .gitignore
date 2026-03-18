@@ -21,6 +21,8 @@ output/
 *.npz
 *.onnx
 *.pkl
+*.safetensors
+submit/*/model/
 
 
 # Allow images in markdown report folders
