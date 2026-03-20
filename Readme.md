@@ -2,8 +2,8 @@
 
 **v2.1.0**
 
-[日本語](#日本語) | [English](#english)
-
+[日本語 (default)](#日本語) | [English](#english)
+　
 ---
 
 ## English
