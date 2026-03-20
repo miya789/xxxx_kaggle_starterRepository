@@ -154,6 +154,6 @@
 
 状況に応じて自動的にサブエージェントに委譲される。並列実行も可能。
 
-- **kaggle-researcher** (haiku) - 論文・類似コンペ解法・ディスカッション調査。コスト節約のためhaiku使用
+- **kaggle-researcher** (sonnet) - 論文・類似コンペ解法・ディスカッション調査
 - **data-analyst** (sonnet) - EDA・可視化・特徴量分析。データの全体像把握に
 - **code-reviewer** (sonnet) - ML/DLコード品質レビュー。読み取り専用で安全

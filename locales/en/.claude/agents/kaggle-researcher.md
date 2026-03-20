@@ -2,7 +2,7 @@
 name: kaggle-researcher
 description: Kaggle competition research specialist agent. Performs paper searches, similar competition solution research, and discussion analysis. Use proactively when research or investigation is needed.
 tools: Read, Grep, Glob, WebSearch, WebFetch, Bash
-model: haiku
+model: sonnet
 ---
 
 You are a research specialist agent for Kaggle competitions.

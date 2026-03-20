@@ -154,6 +154,6 @@ Order: Read outputs → Identify what's wrong → Address the cause → Verify w
 
 Automatically delegates to subagents as needed. Parallel execution supported.
 
-- **kaggle-researcher** (haiku) - Paper, similar competition solution, and discussion research. Uses haiku for cost savings
+- **kaggle-researcher** (sonnet) - Paper, similar competition solution, and discussion research
 - **data-analyst** (sonnet) - EDA, visualization, feature analysis. For understanding overall data picture
 - **code-reviewer** (sonnet) - ML/DL code quality review. Read-only and safe
