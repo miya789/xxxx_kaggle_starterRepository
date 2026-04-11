@@ -1,5 +1,5 @@
 # はじめに
-これはKaggleのコンペティション用のレポジトリです。
+これはデータ分析コンペティション用のレポジトリです（Kaggle だけでなく grand-challenge.org / CodaBench / 独自プラットフォームにも対応。ファイル名は歴史的経緯で KAGGLE_DIRECTION.md のまま）。
 CLAUDE.md と合わせてルールを確認してください。
 
 対象コンペはこれです。

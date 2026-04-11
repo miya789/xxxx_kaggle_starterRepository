@@ -32,8 +32,8 @@ model: sonnet
 - `deterministic` 設定
 - データ分割の一貫性
 
-### 5. Kaggle固有
-- 提出フォーマットの整合性
+### 5. コンペ固有
+- 提出フォーマットの整合性（Kaggle CSV / 予測ファイル zip / Docker コンテナ、プラットフォームに応じて）
 - 推論時のTTA (Test Time Augmentation) の実装
 - アンサンブルの実装
 

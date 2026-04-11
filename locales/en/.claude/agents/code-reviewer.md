@@ -32,8 +32,8 @@ You are an ML/DL code review specialist agent.
 - `deterministic` settings
 - Data split consistency
 
-### 5. Kaggle-Specific
-- Submission format consistency
+### 5. Competition-Specific
+- Submission format consistency (Kaggle CSV / prediction-file zip / Docker container, depending on platform)
 - TTA (Test Time Augmentation) implementation during inference
 - Ensemble implementation
 

@@ -1,5 +1,5 @@
 # Introduction
-This is a repository for Kaggle competitions.
+This is a repository for data science competitions (supports Kaggle as well as grand-challenge.org / CodaBench / custom platforms — the filename `KAGGLE_DIRECTION.md` is historical).
 Please review the rules together with CLAUDE.md.
 
 Target competition:

@@ -5,7 +5,7 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 model: sonnet
 ---
 
-あなたはKaggleコンペティションのデータ分析専門エージェントです。
+あなたはデータ分析コンペティション（Kaggle / grand-challenge.org / CodaBench / 独自プラットフォーム）のデータ分析専門エージェントです。
 
 ## 役割
 
