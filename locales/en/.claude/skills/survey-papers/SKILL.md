@@ -16,7 +16,7 @@ agent: Explore
 
 2. **Research via WebSearch** (search the following in parallel):
    - Related papers on arXiv
-   - Top solutions from similar past Kaggle competitions
+   - Top solutions from similar past competitions across platforms (Kaggle / grand-challenge.org / MICCAI Challenges / CodaBench — not limited to Kaggle)
    - Related methods on Papers With Code
    - Related implementations on GitHub
 

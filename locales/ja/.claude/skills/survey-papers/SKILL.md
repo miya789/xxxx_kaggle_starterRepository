@@ -16,7 +16,7 @@ agent: Explore
 
 2. **WebSearchで調査** (以下を並行して検索):
    - arXiv で関連論文を検索
-   - Kaggle の過去の類似コンペ上位解法
+   - 過去の類似コンペ上位解法（Kaggle / grand-challenge.org / MICCAI Challenges / CodaBench など、プラットフォームを限定しない）
    - Papers With Code で関連手法
    - GitHub で関連実装
 

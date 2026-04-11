@@ -1,7 +1,22 @@
-# Kaggle Competition Workspace
+# Competition Workspace
 
-このリポジトリはKaggleコンペ用の実験管理テンプレートです。
-**判断に迷ったら `KAGGLE_DIRECTION.md` の設計意図を確認すること。**
+このリポジトリはデータ分析コンペ用の実験管理テンプレートです。
+Kaggle だけでなく、grand-challenge.org / CodaBench / 独自プラットフォームなど **Kaggle 以外のコンペにも対応** する想定で運用します。
+**判断に迷ったら `KAGGLE_DIRECTION.md` の設計意図を確認すること。**（ファイル名は歴史的経緯で Kaggle のままですが、中身は汎用の設計原則として読む）
+
+## コンペ開始時の把握フェーズ（学習コードを書く前に必ず実施）
+
+新しいコンペに取り組むときは、いきなり学習コードに入らず、まず以下を **`survey/competition/` 配下に整理**してから実装に着手する:
+
+1. **プラットフォーム特定**: Kaggle か / grand-challenge.org か / CodaBench か / 独自サイトか
+2. **タスク定義**: 入出力、クラス数、評価単位（画像単位/ピクセル単位/患者単位 など）
+3. **データの所在**: ダウンロード元 URL、サイズ、フォーマット、ライセンス、配置先のローカルパス
+4. **評価指標**: 正確な定義（per-class/macro/micro、背景クラスの扱い、など実装上の曖昧さを潰す）
+5. **提出形式**: CSV か / 予測ファイル（画像・JSON）の zip か / Docker コンテナか
+6. **タイムライン**: Validation phase / Test phase / 最終締切、提出回数制限
+7. **ルール**: チーム人数、外部データ可否、事前学習モデル可否、商用ライセンス
+
+この 7 項目を埋めないまま実装を始めない。
 
 ## アイデア提案の原則（堅実＋爆発）
 
@@ -95,31 +110,74 @@
 - config.yamlの `cv.folds_csv` で使用バージョンを指定する
 - 設計意図・切り方の詳細は `workspace/fold/README.md` に記載
 
-## 提出ノートブック（`submit/`）
+## 提出パイプライン（`submit/`）
 
-提出用ノートブックは `submit/` 以下で管理する。
+提出用コードとモデルは `submit/` 以下で管理する。提出形式はプラットフォームによって異なるため、以下のいずれかに沿って構成する。
+
+### 共通ルール（プラットフォーム非依存）
 
 - **命名**: `v001_説明`, `v002_説明`, ... の連番形式
-- **構成**:
-  ```
-  submit/v001_baseline/
-  ├── notebook.py          # 推論スクリプト（自己完結）
-  └── model/               # 学習済みモデル一式をコピー
-      ├── model.safetensors
-      ├── config.json
-      └── ...
-  ```
-- **notebook.py のルール**:
-  - 前処理・後処理をファイル内に自己完結させる（外部モジュールに依存しない）
-  - Kaggle環境とローカル環境を自動判別してパスを切り替える
-  - 推論パラメータをファイル冒頭の定数で管理
-  - submission.csvの検証（行数一致、NaNなし）を必ず行う
-- **モデル**: `workspace/` の学習結果から `best_model/` をコピーする
-- **出典記録**: notebook.py冒頭のdocstringに `Source: workspace/expXXX/.../best_model/` とコピー元パス・CVスコアを明記する
-- **ローカルテスト**: 必ずローカルでsubmission.csv生成まで動作確認してからKaggleに提出
-- **gitには `notebook.py` のみコミット**（model/は.gitignoreまたは手動除外。サイズが大きいため）
-- **アップロード**: Kaggle Datasetへのアップロードはユーザーが手動で行う（Claudeは実行しない）
-- **提出履歴**: `submit/SUBMISSIONS.md` に全提出を記録する。実験フォルダ、モデル元パス、fold定義、学習データ、学習/推論パラメータ、前処理、CV/LBスコアを必ず記載
+- **自己完結**: 提出用スクリプトは前処理・後処理を内部に持ち、`workspace/` の学習コードに依存しない
+- **環境判別**: 実行環境（Kaggle / grand-challenge / ローカル）を自動判別してパスを切り替える
+- **推論パラメータ**: ファイル冒頭の定数で管理（ハードコーディング散在を避ける）
+- **出典記録**: スクリプト冒頭の docstring に `Source: workspace/expXXX/.../best_model/` とコピー元パス・CV スコアを明記する
+- **モデル取り扱い**: `workspace/` から `best_model/` をコピー。`model/` は git 管理外（`.gitignore`）。サイズが大きいため
+- **ローカルテスト必須**: 提出物（CSV / 予測ファイル / Docker イメージ）をローカルで生成まで確認してから提出する
+- **提出物の検証**: プラットフォームの要件（ファイル数・命名規則・値の範囲・欠損）を提出前に必ずチェック
+- **アップロードは手動**: Kaggle Dataset / grand-challenge Submission ページ / その他への実アップロードはユーザーが手動で行う（Claude は実行しない）
+- **提出履歴**: `submit/SUBMISSIONS.md` に全提出を記録する。実験フォルダ、モデル元パス、fold 定義、学習データ、学習/推論パラメータ、前処理、CV/LB スコアを必ず記載
+
+### Kaggle の場合（`submission.csv` 提出型）
+
+```
+submit/v001_baseline/
+├── notebook.py          # Kaggle Notebook にそのまま貼れる推論スクリプト
+└── model/               # 学習済みモデル一式
+```
+
+- エントリポイントは `notebook.py`
+- 出力は `submission.csv`。**行数・カラム名・欠損・値の範囲**を必ず検証してから提出
+- git には `notebook.py` のみコミット
+
+### Kaggle 以外の場合（grand-challenge.org / CodaBench / 独自サイト など）
+
+提出形式は主に次の 2 タイプ。コンペ仕様に合わせて選ぶ。
+
+**(A) 予測ファイル提出型**（画像・マスク・JSON を zip してアップロード）
+
+```
+submit/v001_baseline/
+├── predict.py           # 入力ファイル群を読んで予測を出力するスクリプト
+├── run.sh               # predict.py → 出力検証 → zip 化を一発で行う
+├── requirements.txt     # 再現性のため固定
+├── model/               # 学習済みモデル一式（.gitignore）
+└── output/              # 生成された提出物（.gitignore）
+```
+
+- 入出力ディレクトリは `predict.py` 冒頭の定数で指定（`INPUT_DIR` / `OUTPUT_DIR`）
+- 出力は **ファイル名・サイズ・dtype・値域** まで厳密に公式仕様へ一致させる
+- 提出前に「入力ファイル数 == 出力ファイル数」「stem 名の一致」を assert
+
+**(B) Docker コンテナ提出型**（algorithm container として提出）
+
+```
+submit/v001_baseline/
+├── Dockerfile
+├── process.py           # grand-challenge の algorithm interface を実装
+├── requirements.txt
+├── test/                # ローカル検証用のサンプル入出力
+│   ├── input/
+│   └── expected_output/
+├── build.sh             # docker build
+├── test.sh              # ローカルでコンテナを回して出力を検証
+├── export.sh            # docker save → tar.gz（提出物）
+└── model/               # .gitignore
+```
+
+- プラットフォーム側の I/O 契約（入力パス / 出力パス / ファイル形式）を最優先で守る
+- ビルド後に必ず `test.sh` でローカル回帰テスト。本番と同じ入出力パスで動くことを確認
+- イメージサイズ・GPU 要件・推論時間制限を事前に把握し、必要ならモデル軽量化や ONNX 化を検討
+- gitには `Dockerfile` / `process.py` / スクリプト類のみコミット（`model/` と `test/` の大容量データは除外）
 
 ## エラー分析の原則（スコアの前に出力を見ろ）
 
@@ -138,7 +196,10 @@
 - コンペの評価指標を正確に再現する（既存実装のパラメータも確認）
 - Augmentationはまず弱めで、過学習が確認されてから強める
 - single modelのCV/LBを記録してからアンサンブルする
-- 提出前に行数・カラム名・欠損値・値の範囲を確認する
+- 提出前の検証はプラットフォームに応じて行う:
+  - Kaggle (CSV): 行数・カラム名・欠損値・値の範囲
+  - 予測ファイル (画像/JSON): ファイル数・命名規則・dtype・値域・サイズ
+  - Docker: ローカル回帰テスト、入出力パス、GPU/時間制限
 
 ## リファレンスコード
 
@@ -154,6 +215,6 @@
 
 状況に応じて自動的にサブエージェントに委譲される。並列実行も可能。
 
-- **kaggle-researcher** (sonnet) - 論文・類似コンペ解法・ディスカッション調査
+- **kaggle-researcher** (sonnet) - 論文・類似コンペ解法・ディスカッション調査。Kaggle に限らず grand-challenge.org や CodaBench など他プラットフォームのコンペ調査にも使う
 - **data-analyst** (sonnet) - EDA・可視化・特徴量分析。データの全体像把握に
 - **code-reviewer** (sonnet) - ML/DLコード品質レビュー。読み取り専用で安全

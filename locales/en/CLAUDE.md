@@ -1,7 +1,22 @@
-# Kaggle Competition Workspace
+# Competition Workspace
 
-This repository is an experiment management template for Kaggle competitions.
-**When in doubt, check the design intent in `KAGGLE_DIRECTION.md`.**
+This repository is an experiment management template for data science competitions.
+It supports **Kaggle and non-Kaggle platforms** (grand-challenge.org, CodaBench, custom sites).
+**When in doubt, check the design intent in `KAGGLE_DIRECTION.md`.** (The filename is historical — the content is a general-purpose design guide.)
+
+## Competition Onboarding Phase (Do this before writing any training code)
+
+When starting a new competition, don't jump into training code. First fill in the following under **`survey/competition/`** before any implementation:
+
+1. **Platform**: Kaggle / grand-challenge.org / CodaBench / custom site
+2. **Task definition**: inputs, outputs, number of classes, evaluation unit (per-image / per-pixel / per-patient)
+3. **Data location**: download URLs, size, format, license, local paths where it will live
+4. **Metric**: exact definition (per-class / macro / micro, treatment of background class — eliminate implementation ambiguity)
+5. **Submission format**: CSV / prediction-file zip (images, JSON) / Docker container
+6. **Timeline**: validation phase / test phase / final deadline, submission quota
+7. **Rules**: team size, external data allowed?, pretrained models allowed?, commercial license
+
+Do not start implementation until all 7 items are filled in.
 
 ## Idea Proposal Principles (Safe + Bold)
 
@@ -95,31 +110,74 @@ To avoid local optima, bold ideas should be "nobody would normally do that" leve
 - Specify version in config.yaml via `cv.folds_csv`
 - Document design intent and split details in `workspace/fold/README.md`
 
-## Submission Notebooks (`submit/`)
+## Submission Pipeline (`submit/`)
 
-Submission notebooks are managed under `submit/`.
+Submission code and models are managed under `submit/`. Submission formats differ by platform, so follow one of the layouts below.
+
+### Common Rules (Platform-Agnostic)
 
 - **Naming**: Sequential format `v001_description`, `v002_description`, ...
-- **Structure**:
-  ```
-  submit/v001_baseline/
-  ├── notebook.py          # Inference script (self-contained)
-  └── model/               # Copy of trained model files
-      ├── model.safetensors
-      ├── config.json
-      └── ...
-  ```
-- **notebook.py rules**:
-  - All preprocessing/postprocessing self-contained in the file (no external module dependencies)
-  - Auto-detect Kaggle vs local environment and switch paths accordingly
-  - Inference parameters managed as constants at the top of the file
-  - Always validate submission.csv (row count match, no NaN)
-- **Models**: Copy `best_model/` from `workspace/` training results
-- **Source tracking**: Include `Source: workspace/expXXX/.../best_model/` and CV score in the notebook.py docstring
-- **Local test**: Always verify submission.csv generation locally before submitting to Kaggle
-- **Only commit `notebook.py` to git** (model/ is .gitignored or manually excluded due to size)
-- **Upload**: Upload to Kaggle Dataset is done manually by the user (Claude does not execute this)
+- **Self-contained**: Submission scripts include preprocessing/postprocessing internally and don't depend on `workspace/` training code
+- **Environment detection**: Auto-detect execution environment (Kaggle / grand-challenge / local) and switch paths
+- **Inference parameters**: Managed as constants at the top of the file (avoid scattered hardcoding)
+- **Source tracking**: Include `Source: workspace/expXXX/.../best_model/` and CV score in the script docstring
+- **Model handling**: Copy `best_model/` from `workspace/`. `model/` is git-ignored due to size
+- **Local test is mandatory**: Verify the submission artifact (CSV / prediction files / Docker image) locally before submitting
+- **Artifact validation**: Always check platform requirements (file count, naming rules, value ranges, missing values) before submission
+- **Uploads are manual**: Actual uploads to Kaggle Dataset / grand-challenge submission page / etc. are done by the user (Claude does not execute them)
 - **Submission history**: Record all submissions in `submit/SUBMISSIONS.md`. Include experiment folder, model source path, fold definition, training data, training/inference parameters, preprocessing, CV/LB scores
+
+### Kaggle (`submission.csv` format)
+
+```
+submit/v001_baseline/
+├── notebook.py          # Inference script that can be pasted into a Kaggle Notebook
+└── model/               # Trained model files
+```
+
+- Entry point is `notebook.py`
+- Output is `submission.csv`. Always validate **row count, column names, missing values, value ranges** before submission
+- Only commit `notebook.py` to git
+
+### Non-Kaggle (grand-challenge.org / CodaBench / custom sites)
+
+Typically one of two submission types. Choose based on the competition spec.
+
+**(A) Prediction-file type** (upload a zip of images / masks / JSON)
+
+```
+submit/v001_baseline/
+├── predict.py           # Script that reads input files and writes predictions
+├── run.sh               # predict.py → validate outputs → zip in one go
+├── requirements.txt     # Pinned for reproducibility
+├── model/               # Trained model files (.gitignore)
+└── output/              # Generated submission artifacts (.gitignore)
+```
+
+- Input/output directories specified as constants at the top of `predict.py` (`INPUT_DIR` / `OUTPUT_DIR`)
+- Output must **strictly match the official spec** in filename, size, dtype, and value range
+- Before submission, assert "input file count == output file count" and "stem name match"
+
+**(B) Docker container type** (submit as an algorithm container)
+
+```
+submit/v001_baseline/
+├── Dockerfile
+├── process.py           # Implements the grand-challenge algorithm interface
+├── requirements.txt
+├── test/                # Local validation samples
+│   ├── input/
+│   └── expected_output/
+├── build.sh             # docker build
+├── test.sh              # Run the container locally and validate outputs
+├── export.sh            # docker save → tar.gz (submission artifact)
+└── model/               # .gitignore
+```
+
+- Respect the platform's I/O contract (input path / output path / file format) above all
+- Always run `test.sh` after building to regression-test locally with the same I/O paths as production
+- Know the image size / GPU requirements / inference time limits in advance; consider model lightening or ONNX conversion if needed
+- Only commit `Dockerfile` / `process.py` / scripts to git (exclude large data in `model/` and `test/`)
 
 ## Error Analysis Principles (Look at Outputs Before Scores)
 
@@ -138,7 +196,10 @@ Order: Read outputs → Identify what's wrong → Address the cause → Verify w
 - Accurately reproduce the competition metric (check parameters of existing implementations)
 - Start with weak augmentation; strengthen only after overfitting is confirmed
 - Record single model CV/LB before ensembling
-- Before submission, verify row count, column names, missing values, and value ranges
+- Validate submissions depending on the platform:
+  - Kaggle (CSV): row count, column names, missing values, value ranges
+  - Prediction files (image/JSON): file count, naming rules, dtype, value range, size
+  - Docker: local regression test, I/O paths, GPU/time limits
 
 ## Reference Code
 
@@ -154,6 +215,6 @@ Order: Read outputs → Identify what's wrong → Address the cause → Verify w
 
 Automatically delegates to subagents as needed. Parallel execution supported.
 
-- **kaggle-researcher** (sonnet) - Paper, similar competition solution, and discussion research
+- **kaggle-researcher** (sonnet) - Paper, similar competition solution, and discussion research. Also used for non-Kaggle platforms such as grand-challenge.org and CodaBench
 - **data-analyst** (sonnet) - EDA, visualization, feature analysis. For understanding overall data picture
 - **code-reviewer** (sonnet) - ML/DL code quality review. Read-only and safe
