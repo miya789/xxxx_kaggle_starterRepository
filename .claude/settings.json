@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "latest=$(ls -t daily_reports/*.md 2>/dev/null | head -1); if [ -n \"$latest\" ]; then echo \"[Latest daily report: $latest]\"; cat \"$latest\"; else echo \"[No daily report yet. Consider running /daily-report]\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "today=$(date +%Y%m%d); report=\"daily_reports/${today}.md\"; if [ -f \"$report\" ]; then echo \"\" >> \"$report\"; echo \"<!-- session ended: $(date +%Y-%m-%dT%H:%M:%S%z) -->\" >> \"$report\"; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

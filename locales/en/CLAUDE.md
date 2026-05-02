@@ -4,6 +4,18 @@ This repository is an experiment management template for data science competitio
 It supports **Kaggle and non-Kaggle platforms** (grand-challenge.org, CodaBench, custom sites).
 **When in doubt, check the design intent in `KAGGLE_DIRECTION.md`.** (The filename is historical — the content is a general-purpose design guide.)
 
+## Meta-rule: Designed for Opus 4.7 (1M context)
+
+This template is designed to run on **Claude Opus 4.7 (1M context)**. To leverage that, **don't hold back** on the following:
+
+- **Cross-experiment analysis**: Load `daily_reports/*.md` + all `workspace/exp*/SESSION_NOTES.md` + `claudeSummary.md` + `submit/SUBMISSIONS.md` **in parallel** before judging. Don't try to conserve context by reading sequentially
+- **Code review**: Parallel-load `src/`, `config.yaml`, fold generation scripts, and `KAGGLE_DIRECTION.md` **simultaneously** before checking consistency (trace the leakage path end-to-end: training → inference → submission)
+- **Strategy**: See the "line," not the "points." The `competition-strategist` agent / `/strategy` skill is optimized for cross-experiment synthesis
+- **Background execution**: Run training jobs, scraping, long validations with `run_in_background` or via `/loop` / `/schedule`
+- **Plan mode**: Use Plan mode before major direction changes (moving to a new exp number, switching submission format, etc.)
+
+Parallel reading is OK for **your own competition files**. You don't need to load all of `reference/` or every byte of `datasets/*`.
+
 ## Competition Onboarding Phase (Do this before writing any training code)
 
 When starting a new competition, don't jump into training code. First fill in the following under **`survey/competition/`** before any implementation:
@@ -51,7 +63,12 @@ To avoid local optima, bold ideas should be "nobody would normally do that" leve
   - Output to both console (INFO) and file (DEBUG)
   - Log files saved to `results/{experiment_name}/foldN/` with timestamps
   - Format: `%(asctime)s | %(levelname)s | %(message)s`
-- **All outputs go to `results/{experiment_name}/foldN/`**
+- **All outputs go to `workspace/expXXX_xxx/results/{experiment_name}/foldN/`**
+  - **Always write to `results/` directly under the experiment folder.** Never create it at the repo root or under `workspace/results/`
+  - In `train.py`, build the path **relative to the experiment folder** with absolute resolution: `output_dir = Path(__file__).resolve().parent.parent / 'results' / experiment_name / f'fold{fold}'`. Do NOT use `Path('results/...')` — relative paths depend on cwd and cause accidents
+  - Specify `output_dir` in config.yaml as a path relative to the experiment folder (or absolute)
+  - In `run.sh`, `cd "$(dirname "$0")"` before calling `python src/train.py` (also prevents cwd-dependent accidents)
+  - Example output: `workspace/expA00_baseline/results/expA00_baseline/fold0/best_model.ckpt`
   - Save best_model, checkpoint, log, training_log.json, **config.yaml** all in the same directory
   - **config.yaml is auto-copied at training start** (for reproducibility)
   - Define `experiment.name` in config; change the name when parameters change
@@ -207,14 +224,34 @@ Order: Read outputs → Identify what's wrong → Address the cause → Verify w
 - Use as a base for new experiments
 - See `reference/README.md` for details
 
+## Automation (Hooks)
+
+`.claude/settings.json` ships with these hooks. Inspect/edit via `/hooks`:
+
+- **SessionStart**: Auto-inject the latest `daily_reports/*.md` into context. Ensures you never skip status check at session start
+- **Stop**: When the session ends, append a `<!-- session ended: ... -->` marker to today's daily report (if it exists). Keeps a daily activity log
+
 ## Available Skills
 
-- `/survey-papers [keyword]` - Paper/solution survey (runs in separate context without polluting main context)
+- `/onboard [URL]` - Walk through the 7-item competition onboarding checklist and save to `survey/competition/overview.md`. **Use first when starting a new competition**
+- `/exp-new <name> [--human]` - Scaffold a new experiment folder from `reference/` with auto-generated `SESSION_NOTES.md` and `run.sh`
+- `/daily-report` - Create today's `daily_reports/YYYYMMDD.md` carrying over from yesterday's (use at session start)
+- `/submit-check <path>` - Pre-submission validation (Kaggle CSV / prediction zip / Docker). Use right before any submission
+- `/strategy [focus]` - Cross-experiment synthesis. The `competition-strategist` agent loads all daily reports + SESSION_NOTES + claudeSummary in parallel and proposes next moves. Use weekly or when CV plateaus
+- `/survey-papers [keyword]` - Paper/solution survey (runs in `context: fork` without polluting main context)
 
 ## Custom Agents
 
 Automatically delegates to subagents as needed. Parallel execution supported.
 
-- **kaggle-researcher** (sonnet) - Paper, similar competition solution, and discussion research. Also used for non-Kaggle platforms such as grand-challenge.org and CodaBench
-- **data-analyst** (sonnet) - EDA, visualization, feature analysis. For understanding overall data picture
-- **code-reviewer** (sonnet) - ML/DL code quality review. Read-only and safe
+| Agent | Model | Purpose |
+|-------|-------|---------|
+| **competition-strategist** | opus | Cross-experiment synthesis (loads all daily reports + SESSION_NOTES + claudeSummary + SUBMISSIONS in parallel). Maximum use of 1M context |
+| **code-reviewer** | opus | ML/DL code quality review. Catches issues only visible across multiple files: leakage, metric bugs, broken checkpoints |
+| **submission-validator** | sonnet | Pre-submission validation (CSV / prediction zip / Docker). Eliminates submission errors |
+| **kaggle-researcher** | sonnet | Paper, similar competition solution, and discussion research. Covers non-Kaggle platforms (grand-challenge.org / CodaBench) too |
+| **data-analyst** | sonnet | EDA, visualization, feature analysis. For understanding overall data picture |
+
+**Model selection policy**:
+- **opus**: "Can't notice without reading deeply" tasks (leakage detection, cross-experiment synthesis). Premised on using 1M context
+- **sonnet**: "Wide and shallow" tasks (research, EDA, format checks). Procedural work that benefits from speed

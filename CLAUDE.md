@@ -4,6 +4,18 @@
 Kaggle だけでなく、grand-challenge.org / CodaBench / 独自プラットフォームなど **Kaggle 以外のコンペにも対応** する想定で運用します。
 **判断に迷ったら `KAGGLE_DIRECTION.md` の設計意図を確認すること。**（ファイル名は歴史的経緯で Kaggle のままですが、中身は汎用の設計原則として読む）
 
+## Opus 4.7 (1M context) を使う前提のメタルール
+
+このテンプレートは **Claude Opus 4.7 (1M context)** で運用することを前提にしている。1M コンテキストを活かすため、以下を**遠慮せず**やってよい:
+
+- **横断分析**: `daily_reports/*.md` + 全 `workspace/exp*/SESSION_NOTES.md` + `claudeSummary.md` + `submit/SUBMISSIONS.md` を**並列に一括ロード**してから判断する。逐次 read で context を温存しようとしない
+- **コードレビュー**: `src/` 全体 + `config.yaml` + fold 生成スクリプト + `KAGGLE_DIRECTION.md` を**同時に並列ロード**してから整合性を判断する（学習→推論→提出のリーク経路を通しで追う）
+- **戦略判断**: 「点」ではなく「線」で見る。`competition-strategist` agent / `/strategy` skill が横断 synthesis に最適化されている
+- **背景実行**: 学習ジョブ・スクレイピング・長い検証は `run_in_background` または `/loop` / `/schedule` で回す
+- **Plan mode**: 大きな方針変更（新しい exp 番号への移行、提出形式の変更など）の前に Plan mode で構造化する
+
+並列 read が許容されるのは**コンペ関連の自分のファイル**まで。`reference/` の他人のコード・大量の `datasets/*` の中身を全部ロードする必要はない。
+
 ## コンペ開始時の把握フェーズ（学習コードを書く前に必ず実施）
 
 新しいコンペに取り組むときは、いきなり学習コードに入らず、まず以下を **`survey/competition/` 配下に整理**してから実装に着手する:
@@ -51,7 +63,12 @@ Kaggle だけでなく、grand-challenge.org / CodaBench / 独自プラットフ
   - コンソール（INFO）とファイル（DEBUG）の両方に出力する
   - ログファイルは `results/{experiment_name}/foldN/` にタイムスタンプ付きで保存する
   - フォーマット: `%(asctime)s | %(levelname)s | %(message)s`
-- **全出力は `results/{experiment_name}/foldN/` に集約する**
+- **全出力は `workspace/expXXX_xxx/results/{experiment_name}/foldN/` に集約する**
+  - **必ず実験フォルダ直下の `results/` に出力する**。リポジトリルートや `workspace/results/` などに作らない
+  - `train.py` の冒頭で `output_dir = Path(__file__).resolve().parent.parent / 'results' / experiment_name / f'fold{fold}'` のように**実験フォルダ基準で絶対パスを組む**こと。`Path('results/...')` のような相対パスは cwd 依存で事故るので禁止
+  - config.yaml の `output_dir` も実験フォルダからの相対 / 絶対パスで明示する
+  - `run.sh` 内では `cd "$(dirname "$0")"` してから `python src/train.py` を呼ぶ（これも cwd 依存事故防止）
+  - 出力例: `workspace/expA00_baseline/results/expA00_baseline/fold0/best_model.ckpt`
   - best_model, checkpoint, log, training_log.json, **config.yaml** を全て同一ディレクトリに保存する
   - **config.yamlは学習開始時に自動コピーされる**（再現性のため）
   - `experiment.name` をconfigに定義し、パラメータ変更時は名前を変える
@@ -207,14 +224,34 @@ submit/v001_baseline/
 - 新しい実験のベースとして活用すること
 - 詳細は `reference/README.md` を参照
 
+## 自動化（Hooks）
+
+`.claude/settings.json` に以下が設定されている。`/hooks` で確認・編集可能:
+
+- **SessionStart**: 最新の `daily_reports/*.md` を context に自動注入する。セッション開始時に状況把握をスキップしないため
+- **Stop**: セッション終了時に今日の日報があれば `<!-- session ended: ... -->` マーカーを追記する。日次の作業ログを残すため
+
 ## 利用可能なSkills
 
-- `/survey-papers [キーワード]` - 論文・解法調査（メインコンテキストを汚さず別コンテキストで実行）
+- `/onboard [URL]` - コンペ開始時の7項目チェックリストを対話的に埋め、`survey/competition/overview.md` に保存。**新しいコンペに入ったら最初にこれ**
+- `/exp-new <name> [--human]` - `reference/` から雛形コピーで新しい実験フォルダを作成し、`SESSION_NOTES.md` と `run.sh` を生成
+- `/daily-report` - 今日の `daily_reports/YYYYMMDD.md` を前日から引き継いで作成（セッション開始時）
+- `/submit-check <path>` - 提出物の事前検証（Kaggle CSV / 予測ファイル zip / Docker）。提出直前に必ず使う
+- `/strategy [追加観点]` - 横断 synthesis を実行。`competition-strategist` agent が全 daily_report + SESSION_NOTES + claudeSummary を一括ロードして次の一手を出す。週1回や CV 頭打ち時
+- `/survey-papers [キーワード]` - 論文・解法調査（`context: fork` でメインコンテキストを汚さない）
 
 ## Custom Agents
 
 状況に応じて自動的にサブエージェントに委譲される。並列実行も可能。
 
-- **kaggle-researcher** (sonnet) - 論文・類似コンペ解法・ディスカッション調査。Kaggle に限らず grand-challenge.org や CodaBench など他プラットフォームのコンペ調査にも使う
-- **data-analyst** (sonnet) - EDA・可視化・特徴量分析。データの全体像把握に
-- **code-reviewer** (sonnet) - ML/DLコード品質レビュー。読み取り専用で安全
+| Agent | Model | 用途 |
+|-------|-------|------|
+| **competition-strategist** | opus | 横断 synthesis（全 daily_report + SESSION_NOTES + claudeSummary + SUBMISSIONS を一括分析）。1M ctx を最大活用 |
+| **code-reviewer** | opus | ML/DLコード品質レビュー。リーク・指標バグ・チェックポイント破綻など、複数ファイル横断でしか見えない問題を検出 |
+| **submission-validator** | sonnet | 提出物の事前検証（CSV / 予測ファイル zip / Docker）。提出ミスを潰す |
+| **kaggle-researcher** | sonnet | 論文・類似コンペ解法・ディスカッション調査。Kaggle / grand-challenge.org / CodaBench など他プラットフォームも対応 |
+| **data-analyst** | sonnet | EDA・可視化・特徴量分析。データの全体像把握 |
+
+**モデル選定の基本方針**:
+- **opus**: 「深く読まないと気付けない」系（リーク検出・横断 synthesis）。1M ctx の活用が前提
+- **sonnet**: 「広く浅く回す」系（調査・EDA・形式チェック）。手数で回せる手続き的な仕事

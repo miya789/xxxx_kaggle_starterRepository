@@ -1,0 +1,42 @@
+---
+name: strategy
+description: Run cross-experiment competition strategy synthesis. Invokes the competition-strategist agent which loads daily_reports/* + all SESSION_NOTES.md / claudeSummary.md / submit/SUBMISSIONS.md / KAGGLE_DIRECTION.md in parallel and proposes next moves. Use weekly or at inflection points.
+argument-hint: "[additional focus or blank for default synthesis]"
+---
+
+# Strategy Synthesis Skill
+
+## Steps
+
+1. **Check target files exist**:
+   - Check `KAGGLE_DIRECTION.md` / `claudeSummary.md` / `daily_reports/` / `submit/SUBMISSIONS.md` / `workspace/`
+   - If any missing, mark "Not found" and pass through to agent
+
+2. **Invoke competition-strategist agent**:
+   - subagent_type: `competition-strategist`
+   - In the prompt, specify:
+     - Competition name and deadline (from KAGGLE_DIRECTION.md)
+     - `$ARGUMENTS` as additional focus if given (e.g., "focus on ensemble strategy", "emphasize LB shake risk")
+     - Output target: `daily_reports/strategy_YYYYMMDD.md` or append to today's daily report's "Strategy & Roadmap" section
+
+3. **Save agent output**:
+   - Save to `daily_reports/strategy_YYYYMMDD.md` (number sequentially if exists)
+   - Summarize key proposals (safe+bold, unexplored, risks) for the user
+
+4. **Propose next actions**:
+   - Pick 1-2 of the proposed next moves to recommend for tomorrow
+   - Suggest `/exp-new` for new experiment folders or `/survey-papers` for further research as needed
+
+## When to Use
+
+- **Weekly**: as a regular checkpoint
+- **CV plateaus**: to break out of local optima
+- **After LB shake**: to step back and identify the cause
+- **New data drop**: to re-evaluate strategy
+- **1 week before deadline**: to optimize remaining resource allocation
+
+## Notes
+
+- Agent output is fact-based. **Inferences are marked "Inference:"**
+- "Best X" claims must always cite source (experiment folder, daily report date)
+- Don't blindly execute agent suggestions — treat them as input for user judgment
