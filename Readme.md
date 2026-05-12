@@ -1,6 +1,6 @@
 # Competition Experiment Template
 
-**v2.3.0**
+**v2.3.1**
 
 > Supports **Kaggle** and **non-Kaggle** competitions (grand-challenge.org, CodaBench, custom platforms).
 > Designed for **Claude Opus 4.7 (1M context)**.
@@ -236,6 +236,7 @@ Claude Code を前提に、**データ取得 → EDA → 調査（論文/類似�
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.3.1 | 2026-05-03 | Add **hybrid phase guard (early / mid / late)** to prevent "premature ensemble". Time-based + milestone-based detection in `competition-strategist`. Compact phase table in CLAUDE.md (always loaded), detailed do/don't lists in KAGGLE_DIRECTION.md |
 | v2.3.0 | 2026-05-02 | Designed for **Claude Opus 4.7 (1M context)**: `code-reviewer` and new `competition-strategist` agents upgraded to opus; add `submission-validator` agent; add 5 new skills (`/onboard`, `/exp-new`, `/daily-report`, `/submit-check`, `/strategy`); CLAUDE.md gets explicit "parallel-load for synthesis" guidance |
 | v2.2.0 | 2026-04-11 | Support non-Kaggle platforms (grand-challenge.org / CodaBench / custom): add competition onboarding checklist (7 items) and split submission pipeline into Kaggle / prediction-file / Docker formats |
 | v2.1.1 | 2026-03-20 | Change kaggle-researcher agent from haiku to sonnet |

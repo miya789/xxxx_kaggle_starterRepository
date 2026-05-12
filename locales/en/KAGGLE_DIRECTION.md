@@ -277,6 +277,89 @@ Summarize basic competition information.
 This section provides **judgment guidelines**, not step-by-step procedures.
 For procedures, refer to Skills and Readme.md.
 
+## Phase Guidance (Early / Mid / Late)
+
+**A time-axis guard to prevent "premature ensemble" and "premature TTA".**
+Competitions have phases. **If you don't separate "what to do" from "what NOT to do" per phase, you'll waste resources by bringing late-stage optimization into early stages** (classic premature optimization).
+
+Phase detection is **hybrid: time-based + milestone-based**:
+- Time-based: compute progress % from the deadline in `KAGGLE_DIRECTION.md` and the first date in `daily_reports/`
+- Milestone-based: check `SESSION_NOTES.md` / `submit/SUBMISSIONS.md` / `claudeSummary.md` for each phase's completion criteria
+- **Warn if the two diverge**: "Entered late phase but baseline doesn't run yet" / "Trying ensemble in early phase"
+
+### Early (~30% / Milestone: baseline complete + CV/LB correlation confirmed + 1 successful submission)
+
+**Do**:
+- Data understanding (EDA: distribution, missing, group structure, outliers)
+- Fold design (identify grouping key → persist to `workspace/fold/{version}/folds.csv`)
+- Accurate metric implementation (close the gap between competition spec and sklearn defaults)
+- Build **one strong single model** (reference/ as base is fine)
+- Working submission pipeline (CSV / prediction zip / Docker)
+- Paper / similar competition / discussion research (`/survey-papers`)
+
+**Forbidden**:
+- Ensemble (**without absolute single-model score, you can't measure lift**)
+- TTA (keep base inference baseline so you can measure effects later)
+- Heavy augmentation (overfitting fix is for when overfitting actually happens)
+- Complex post-processing (threshold optimization, morphology)
+- Excessive hyperparameter tuning (try architecture before search)
+
+**Completion criteria**:
+- [ ] CV score is stable (fold variance within acceptable range)
+- [ ] CV/LB correlation confirmed at least once
+- [ ] Submission pipeline works (no submission errors)
+- [ ] Metric implementation matches official spec
+
+### Mid (30-70% / Milestone: 3+ independent single models, error patterns understood)
+
+**Do**:
+- **Increase model diversity**: encoder swap, architecture change, input modality change
+- Error analysis (visually inspect ≥20 prediction vs ground truth pairs → classify error types)
+- Consider added data / external data / pseudo-labeling
+- **Quantitatively validate augmentation by CV**
+- Improve preprocessing (normalization, sampling, class imbalance)
+- Loss function tuning (focal, dice, custom)
+
+**Forbidden**:
+- **Serious ensemble work** (lift single CV first; mixing hides per-model contribution)
+- Excessive hyperparameter search (don't burn time on lr/batch/optimizer grids)
+- Late-stage post-processing tuning (makes evaluation unstable)
+
+**Completion criteria**:
+- [ ] 3-5 single models with independent directions (CV improving independently)
+- [ ] Error patterns classified (you can identify which of preprocessing / postprocessing / model capacity / data shortage matters)
+- [ ] Stable CV/LB correlation continues
+
+### Late (70%- / Milestone: ensemble CV > best single CV, final 2 submission criteria clear)
+
+**Do**:
+- **Ensemble strategy**: weight optimization (CV-based), stacking, blending
+- TTA (flip / multi-scale / probability averaging choice)
+- Post-processing optimization (threshold, morphology, NMS)
+- Final submission selection (best CV / best LB / conservative-stable balance)
+- LB shake risk assessment (CV/LB correlation, fold variance, submission history dispersion)
+- Full pre-submission validation (`/submit-check`)
+
+**Forbidden**:
+- **Starting a new architecture** (training won't finish / validation too shallow)
+- Large preprocessing changes (don't break the pipeline established in mid)
+- Large-scale hyperparameter tuning (diminishing returns)
+- New external data (insufficient validation time)
+
+**Completion criteria**:
+- [ ] Ensemble CV exceeds best single CV
+- [ ] Final 2 submission selection criteria are clear (reasoning written in SESSION_NOTES)
+- [ ] LB shake scenarios evaluated (optimistic + pessimistic)
+- [ ] `/submit-check` passes for every intended submission
+
+### Phase Misalignment Warnings
+
+When time and milestones diverge, the `competition-strategist` agent warns:
+
+- **Progress delay**: "Entered mid phase but baseline still doesn't run" → prioritize early phase
+- **Premature optimization**: "Trying ensemble in early phase" → lift single first
+- **Late new-architecture attempt**: "3 days left, trying new architecture" → restrict to optimizing existing assets
+
 ## Intent of "Safe + Bold"
 
 Looking back at top Kaggle solutions, it's rare to win with incremental improvement (safe) alone. Many gold medal solutions contain a "nobody would normally do that" leap.

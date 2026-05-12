@@ -30,6 +30,25 @@ When starting a new competition, don't jump into training code. First fill in th
 
 Do not start implementation until all 7 items are filled in.
 
+## Phase Guard (Don't Jump to Ensemble)
+
+**Competitions have phases. If you don't separate "do/don't" per phase, you'll waste resources by bringing late-stage optimization into early stages.**
+
+| Phase | Progress | Do | **Never Do** |
+|-------|----------|-----|--------------|
+| Early | ~30% | EDA / fold design / **one strong baseline** / working submission pipeline / research | Ensemble, TTA, heavy aug, complex post-processing, hyperparameter tuning |
+| Mid | 30-70% | **3-5 single models** with diversity / error analysis / data additions / aug validation | **Serious ensemble work**, excessive hyperparameter search |
+| Late | 70%- | **Ensemble** / TTA / post-processing / final submission selection / LB shake evaluation | New architecture, large preprocessing changes, new external data |
+
+Phase detection is **hybrid: time-based + milestone-based**. The `competition-strategist` agent (invoked via `/strategy`) auto-detects the phase and warns on divergence (e.g., "Entered mid phase but only 1 baseline exists").
+
+**Session start checklist**: Before proposing any action:
+1. What phase are we in? (days remaining + milestone status)
+2. Is the proposed action in the current phase's "do" list?
+3. If not, explicitly state it's a phase violation before deferring to the user
+
+See `KAGGLE_DIRECTION.md` "Phase Guidance" for details and per-phase completion criteria.
+
 ## Idea Proposal Principles (Safe + Bold)
 
 **When proposing approaches or ideas, always present both a "safe" and a "bold" option.**

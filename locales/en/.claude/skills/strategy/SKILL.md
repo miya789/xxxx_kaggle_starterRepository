@@ -16,12 +16,15 @@ argument-hint: "[additional focus or blank for default synthesis]"
    - subagent_type: `competition-strategist`
    - In the prompt, specify:
      - Competition name and deadline (from KAGGLE_DIRECTION.md)
+     - **Phase detection must be the first thing** (time-based + milestone-based; warn on misalignment)
+     - **All subsequent proposals are restricted to that phase's "do" list** (see KAGGLE_DIRECTION.md "Phase Guidance")
      - `$ARGUMENTS` as additional focus if given (e.g., "focus on ensemble strategy", "emphasize LB shake risk")
      - Output target: `daily_reports/strategy_YYYYMMDD.md` or append to today's daily report's "Strategy & Roadmap" section
 
 3. **Save agent output**:
    - Save to `daily_reports/strategy_YYYYMMDD.md` (number sequentially if exists)
-   - Summarize key proposals (safe+bold, unexplored, risks) for the user
+   - Summarize key proposals (**phase detection**, safe+bold, unexplored, risks) for the user
+   - **Surface misalignment warnings first** (e.g., "Entered mid phase but no working baseline")
 
 4. **Propose next actions**:
    - Pick 1-2 of the proposed next moves to recommend for tomorrow

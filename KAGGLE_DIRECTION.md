@@ -277,6 +277,89 @@ Claude Codeに以下のように指示：
 このセクションは具体的な手順ではなく、**判断の指針**を示す。
 手順は Skills や Readme.md を参照すること。
 
+## フェーズ別の指針（序盤・中盤・終盤）
+
+**「いきなりアンサンブル」「いきなり TTA」を防ぐための時系列ガード。**
+コンペには段階がある。**各フェーズの "やるべきこと" と "やってはいけないこと" を分けないと、終盤にやるべき最適化を序盤に持ち込んでリソースを溶かす**（典型的な早期最適化）。
+
+判定は**時間ベース + マイルストーンベースのハイブリッド**で行う:
+- 時間ベース: `KAGGLE_DIRECTION.md` の締切と `daily_reports/` の最初の日付から進捗 % を計算
+- マイルストーンベース: 各フェーズの完了条件が満たされたかを `SESSION_NOTES.md` / `submit/SUBMISSIONS.md` / `claudeSummary.md` から判定
+- **両者が乖離していたら警告**: 「終盤に入ったが single baseline がまだ動いていない」「中盤なのにアンサンブルを試している」など
+
+### 序盤 (~30% / マイルストーン: baseline 完成 + CV/LB 相関確認 + submission 1回成功)
+
+**やる**:
+- データ理解（EDA: 分布・欠損・グループ構造・外れ値）
+- fold 設計（grouping キー特定 → `workspace/fold/{version}/folds.csv` 永続化）
+- 評価指標の正確な実装（コンペ仕様と sklearn デフォルトのギャップを潰す）
+- **1つの strong single model** を作る（reference/ ベースで十分）
+- 動く submission pipeline（CSV / 予測 zip / Docker のいずれか）
+- 論文・類似コンペ・discussion の調査（`/survey-papers`）
+
+**禁止**:
+- アンサンブル（**single の絶対値がないと、伸び幅を測れない**）
+- TTA（後で効果を測るために、ベース推論で良い）
+- heavy augmentation（過学習対策は過学習が起きてから）
+- 複雑な post-processing（閾値最適化・形態学処理など）
+- 過度な hyperparam tuning（探索の前にアーキを試すべき）
+
+**完了条件**:
+- [ ] CV スコアが安定して出る（fold 間ばらつきが許容範囲）
+- [ ] CV/LB 相関を1回は確認した
+- [ ] submission pipeline が動く（提出 error にならない）
+- [ ] 評価指標の実装が公式と一致している確認済み
+
+### 中盤 (30-70% / マイルストーン: 独立した single model 3つ以上、エラーパターン把握)
+
+**やる**:
+- **モデル多様性を上げる**: encoder 変更、アーキテクチャ変更、入力モダリティ変更
+- エラー分析（prediction vs ground truth を最低 20 件目視 → エラータイプ分類）
+- データ追加・外部データ・pseudo-labeling の検討
+- augmentation の効果を **CV で定量的に検証**
+- 前処理の改善（normalization, sampling, クラス不均衡対策）
+- 損失関数の調整（focal, dice, custom）
+
+**禁止**:
+- **アンサンブル本格化**（single CV を伸ばすのが先。混ぜると個別モデルの貢献が見えない）
+- 過度な hyperparam search（lr / batch / optimizer の grid search で時間溶かす）
+- 終盤向けの post-processing tuning（評価が不安定になる）
+
+**完了条件**:
+- [ ] 独立した方向性の single model が 3-5 個揃った（CV が独立して伸びている）
+- [ ] エラーパターンが分類できている（前処理 / 後処理 / モデル容量 / データ不足のどれが効くか把握）
+- [ ] CV/LB の安定した相関が継続している
+
+### 終盤 (70%- / マイルストーン: ensemble CV > best single CV、final 2 submission 選定基準明確)
+
+**やる**:
+- **アンサンブル戦略**: 重み最適化（CV ベース）、stacking、blending
+- TTA（flip / multi-scale / 確率平均方法の選定）
+- post-processing 最適化（閾値、形態学処理、後処理 NMS など）
+- 最終 submission の選定（best CV / best LB / 保守的安定型 のバランス）
+- LB shake リスク評価（CV/LB 相関、fold 間ばらつき、提出履歴の分散）
+- 提出物の完全検証（`/submit-check`）
+
+**禁止**:
+- **新アーキテクチャ着手**（学習時間が間に合わない / 検証が浅くなる）
+- 大きな前処理変更（中盤で確立したパイプラインを壊さない）
+- 大規模な hyperparam tuning（diminishing returns）
+- 新規外部データの追加（検証時間不足）
+
+**完了条件**:
+- [ ] ensemble CV が best single CV を上回る
+- [ ] final 2 submission の選定基準が明確（理由を SESSION_NOTES に書ける）
+- [ ] LB shake シナリオを評価済み（楽観/悲観の両方）
+- [ ] `/submit-check` を提出予定の全 submission に対して通過
+
+### フェーズ間の乖離警告
+
+時間とマイルストーンが乖離していたら、`competition-strategist` agent が警告する:
+
+- **進捗遅延**: 「中盤入っているが、まだ baseline が動いていない」→ 序盤を優先せよ
+- **早期最適化**: 「序盤なのにアンサンブルを試している」→ single を伸ばせ
+- **終盤の新規着手**: 「残り3日で新アーキを試そうとしている」→ 既存資産の最適化に絞れ
+
 ## 「堅実＋爆発」の意図
 
 Kaggleの上位解法を振り返ると、段階的改善（堅実）だけで勝てることは稀。多くの金メダル解法には「それは普通やらない」という飛躍がある。

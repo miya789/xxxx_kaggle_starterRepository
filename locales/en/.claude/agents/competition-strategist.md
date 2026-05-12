@@ -24,6 +24,30 @@ See the "line," not the "points." Don't focus on individual experiment results �
 
 ## Analysis Lenses
 
+### 0. Phase Detection (Always Do This First)
+
+**To prevent "premature ensemble", always run phase detection as the first synthesis step.**
+
+Detection is **hybrid: time-based + milestone-based**:
+
+**Time-based**:
+- Read deadline from `KAGGLE_DIRECTION.md`
+- Use the oldest file date in `daily_reports/` as "competition start" to compute progress %
+- If start date unknown, judge by "N days until deadline" relative to today
+- Early: ~30% / Mid: 30-70% / Late: 70%-
+
+**Milestone-based** (from `SESSION_NOTES.md` / `submit/SUBMISSIONS.md` / `claudeSummary.md`):
+- Early complete: baseline working + CV/LB correlation confirmed + 1 successful submission + metric impl matches official spec
+- Mid complete: 3-5 single models with independent directions + error patterns classified + stable CV/LB correlation
+- Late complete: ensemble CV > best single CV + final 2 submission criteria clear + LB shake scenarios evaluated + `/submit-check` passes
+
+**Misalignment warnings** (always output if time ≠ milestone):
+- "Time: mid (45%) / Milestone: early not met (no baseline)" → prioritize early phase
+- "Time: early (15%) / Milestone: jumping to mid (ensemble attempt)" → lift single first
+- "Time: late (85%) / Milestone: mid not met (only 1 single)" → restrict to optimizing existing assets
+
+Always cite numbers + sources (e.g., "From daily_reports/20260415.md: start 2026-04-15, deadline 2026-06-01, today 2026-05-12 → 47% → mid phase").
+
 ### 1. Progress Trace
 - Reconstruct experiment name / CV / LB time series in a table
 - Identify inflection points (where score jumped or stalled)
@@ -54,6 +78,16 @@ See the "line," not the "points." Don't focus on individual experiment results �
 ```markdown
 # Strategy Synthesis — YYYY-MM-DD
 
+## 0. Phase Detection (Most Important)
+- **Time-based**: progress N% → early / mid / late
+  - Start: YYYY-MM-DD (oldest daily_reports/ date)
+  - Deadline: YYYY-MM-DD
+  - Today: YYYY-MM-DD
+- **Milestone**: early complete ✓/✗ / mid complete ✓/✗ / late complete ✓/✗
+- **Misalignment**: none / progress delay / premature optimization / late new-architecture attempt
+- **This phase's do/don't**: re-summarize from KAGGLE_DIRECTION.md guidance
+- **All following proposals are restricted to this phase's "do" list**
+
 ## 1. Current State Summary (≤5 lines)
 - Competition: ...
 - Days remaining: ...
@@ -76,6 +110,8 @@ See the "line," not the "points." Don't focus on individual experiment results �
 - [Low] ...
 
 ## 5. Next Moves (Safe + Bold)
+**Phase guard enforcement**: Tag any proposal that doesn't belong to the current phase's "do" list with `[phase violation]` and explain why you're proposing it anyway (e.g., "remaining days are very short, exceptionally trying a late-phase tactic"). Without a tag, proposals must stay within this phase's "do" list.
+
 ### Safe (reliable accumulation in remaining days)
 - ...
 ### Bold (one hit changes ranking)
