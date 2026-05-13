@@ -152,7 +152,11 @@ Kaggle だけでなく、grand-challenge.org / CodaBench / 独自プラットフ
 
 ### 共通ルール（プラットフォーム非依存）
 
-- **命名**: `v001_説明`, `v002_説明`, ... の連番形式
+- **命名**: `v00X_<元実験フォルダ名>` または `v00X_<元実験フォルダ名>_<追加識別子>` の連番形式
+  - 例: `submit/v001_expA02_super_clone` / `submit/v002_expA03_anchor_calib_ens5fold`
+  - **元実験フォルダ名を必ず含める**。後で「これどの exp の weight だっけ？」を防ぐため
+  - アンサンブル時は代表 exp 名 + `_ens` のように区別（例: `v005_expA04_ens3model`）
+  - 追加識別子は推論パラメータの違いなど（例: `_tta8`, `_thresh07`）
 - **自己完結**: 提出用スクリプトは前処理・後処理を内部に持ち、`workspace/` の学習コードに依存しない
 - **環境判別**: 実行環境（Kaggle / grand-challenge / ローカル）を自動判別してパスを切り替える
 - **推論パラメータ**: ファイル冒頭の定数で管理（ハードコーディング散在を避ける）
@@ -163,17 +167,46 @@ Kaggle だけでなく、grand-challenge.org / CodaBench / 独自プラットフ
 - **アップロードは手動**: Kaggle Dataset / grand-challenge Submission ページ / その他への実アップロードはユーザーが手動で行う（Claude は実行しない）
 - **提出履歴**: `submit/SUBMISSIONS.md` に全提出を記録する。実験フォルダ、モデル元パス、fold 定義、学習データ、学習/推論パラメータ、前処理、CV/LB スコアを必ず記載
 
-### Kaggle の場合（`submission.csv` 提出型）
+### Kaggle の場合
+
+Kaggle には **CSV Competition** と **Code Competition** の 2 タイプがある。提出フローが全く違うので最初に判別する:
+
+| 種別 | 判別方法 | 提出方法 |
+|---|---|---|
+| **CSV Competition** | Rules に "Submit CSV directly" 等 / `kaggle competitions submit` が成功 | `submission.csv` を直接 upload。CLI 一発 |
+| **Code Competition** | Rules に "Submissions are made from Kaggle Notebooks" / `kaggle competitions submit` が "Code Competition" エラー | Kaggle 上で Notebook 実行 → "Submit to Competition"。**最後の Submit は手動** |
+
+#### (a) CSV Competition
 
 ```
 submit/v001_baseline/
-├── notebook.py          # Kaggle Notebook にそのまま貼れる推論スクリプト
+├── notebook.py          # ローカルで実行する推論スクリプト
 └── model/               # 学習済みモデル一式
 ```
 
 - エントリポイントは `notebook.py`
 - 出力は `submission.csv`。**行数・カラム名・欠損・値の範囲**を必ず検証してから提出
 - git には `notebook.py` のみコミット
+
+#### (b) Code Competition
+
+```
+submit/v001_baseline/
+├── inference_notebook.py     # jupytext で .ipynb と同期する Python ソース（commit）
+├── inference_notebook.ipynb  # .py から生成（commit しない）
+├── kernel-metadata.json      # Notebook の Kaggle メタ（commit）
+├── dataset-metadata.json     # Dataset の Kaggle メタ（commit）
+├── upload.sh                 # Dataset 作成 + Notebook push を1コマンド化（commit）
+└── kaggle_dataset/           # Dataset アップロード対象（.gitignore）
+    ├── models/
+    └── (学習済みモデル一式)
+```
+
+- **詳細フロー・テンプレート・ハマりどころは `tools/kaggle_code_competition_submission.md` を参照**
+- 流れ: `upload.sh` で Dataset upload + Notebook push → Kaggle UI で Save & Run All → "Submit to Competition"（手動）
+- 必須: `enable_internet: false`（pip install 不可）、`kernel_sources` 使わず self-contained に
+- 検証: notebook 末尾で `assert len(sub) == EXPECTED_ROWS` 等の形式 assert
+- 提出時の CV スコアは `kernel-metadata.json` / `dataset-metadata.json` の title に埋め込む（どの weight か一目で分かるように）
 
 ### Kaggle 以外の場合（grand-challenge.org / CodaBench / 独自サイト など）
 

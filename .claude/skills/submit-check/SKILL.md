@@ -1,7 +1,7 @@
 ---
 name: submit-check
 description: 提出物の事前検証を実行する。Kaggle CSV / 予測ファイル zip / Docker コンテナの3形式に対応。submission-validator agent を呼び出して機械的にチェックする。提出直前に必ず使う。
-argument-hint: "<submit/v00X_xxx のパス> [--platform kaggle|gc|codabench]"
+argument-hint: "<submit/v00X_<元exp>_xxx のパス> [--platform kaggle|gc|codabench]"
 ---
 
 # 提出物 事前検証 Skill

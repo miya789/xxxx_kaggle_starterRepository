@@ -12,13 +12,14 @@ You are a pre-submission validation specialist.
 
 ### 0. Format Detection
 Read `KAGGLE_DIRECTION.md` and determine the submission format:
-- (A) Kaggle CSV type
+- (A) Kaggle CSV Competition (`submission.csv` direct upload)
+- (A') Kaggle **Code Competition** (Notebook-based submission — **different flow**)
 - (B) Prediction-file zip type (grand-challenge.org / CodaBench etc.)
 - (C) Docker container type (grand-challenge.org algorithm container etc.)
 
-Ask the user if you can't determine it.
+Ask the user if you can't determine it. For Kaggle, distinguish CSV vs Code by checking the Rules page for "Submissions are made from Kaggle Notebooks" or whether `kaggle competitions submit` succeeds.
 
-### 1. (A) Kaggle CSV checks
+### 1. (A) Kaggle CSV Competition checks
 - Generate `submission.csv`
 - Load with pandas and assert:
   - row count == sample_submission.csv row count
@@ -28,6 +29,31 @@ Ask the user if you can't determine it.
   - dtypes (string id, numeric target)
 - File size within Kaggle's limit (usually a few hundred MB)
 - No BOM, LF line endings
+
+### 1'. (A') Kaggle Code Competition checks
+
+Reference: `tools/kaggle_code_competition_submission.md`
+
+- Required files present:
+  - [ ] `inference_notebook.py` or `inference_notebook.ipynb`
+  - [ ] `kernel-metadata.json`
+  - [ ] `dataset-metadata.json`
+  - [ ] `upload.sh`
+- `kernel-metadata.json` requirements:
+  - [ ] `enable_internet: false` (no pip install — only libraries already on Kaggle)
+  - [ ] `competition_sources` has the correct competition slug
+  - [ ] `dataset_sources` has the model Dataset slug
+  - [ ] `kernel_sources` empty or minimal (notebook should be self-contained)
+- `dataset-metadata.json`:
+  - [ ] `id` slug is lowercase alphanumeric + hyphens only
+  - [ ] `isPrivate: true` (public Datasets can be physically copied by other teams)
+- `inference_notebook.py` content:
+  - [ ] Path resolution for Kaggle env (`/kaggle/input/<comp-slug>` and `/kaggle/input/<dataset-slug>`)
+  - [ ] Output to `/kaggle/working/submission.csv`
+  - [ ] Trailing format asserts (`assert len(sub) == EXPECTED_ROWS` etc.)
+  - [ ] No imports via `kernel_sources` (self-contained)
+- `kaggle_dataset/` is gitignored
+- Actual upload is manual. Only verify locally (e.g., `bash upload.sh --dry-run` if supported)
 
 ### 2. (B) Prediction-file zip checks
 - Run `predict.py` or `run.sh` to generate `output/`

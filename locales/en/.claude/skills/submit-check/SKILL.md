@@ -1,7 +1,7 @@
 ---
 name: submit-check
 description: Run pre-submission validation. Handles 3 formats — Kaggle CSV / prediction-file zip / Docker container. Delegates to the submission-validator agent for mechanical checks. Use right before any submission.
-argument-hint: "<path to submit/v00X_xxx> [--platform kaggle|gc|codabench]"
+argument-hint: "<path to submit/v00X_<source-exp>_xxx> [--platform kaggle|gc|codabench]"
 ---
 
 # Pre-submission Validation Skill

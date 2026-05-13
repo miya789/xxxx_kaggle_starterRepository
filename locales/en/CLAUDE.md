@@ -152,7 +152,11 @@ Submission code and models are managed under `submit/`. Submission formats diffe
 
 ### Common Rules (Platform-Agnostic)
 
-- **Naming**: Sequential format `v001_description`, `v002_description`, ...
+- **Naming**: Sequential format `v00X_<source-exp-folder>` or `v00X_<source-exp-folder>_<extra-tag>`
+  - Examples: `submit/v001_expA02_super_clone` / `submit/v002_expA03_anchor_calib_ens5fold`
+  - **Always include the source experiment folder name** — prevents the "which exp's weights is this?" problem later
+  - For ensembles, use representative exp name + `_ens` (e.g., `v005_expA04_ens3model`)
+  - Extra tag for inference param variations (e.g., `_tta8`, `_thresh07`)
 - **Self-contained**: Submission scripts include preprocessing/postprocessing internally and don't depend on `workspace/` training code
 - **Environment detection**: Auto-detect execution environment (Kaggle / grand-challenge / local) and switch paths
 - **Inference parameters**: Managed as constants at the top of the file (avoid scattered hardcoding)
@@ -163,17 +167,46 @@ Submission code and models are managed under `submit/`. Submission formats diffe
 - **Uploads are manual**: Actual uploads to Kaggle Dataset / grand-challenge submission page / etc. are done by the user (Claude does not execute them)
 - **Submission history**: Record all submissions in `submit/SUBMISSIONS.md`. Include experiment folder, model source path, fold definition, training data, training/inference parameters, preprocessing, CV/LB scores
 
-### Kaggle (`submission.csv` format)
+### Kaggle
+
+Kaggle has **two competition types**: **CSV Competition** vs **Code Competition**. Submission flows differ completely — identify the type first:
+
+| Type | How to detect | Submission |
+|---|---|---|
+| **CSV Competition** | Rules say "Submit CSV directly" / `kaggle competitions submit` succeeds | Upload `submission.csv` directly. CLI one-liner |
+| **Code Competition** | Rules say "Submissions are made from Kaggle Notebooks" / `kaggle competitions submit` returns "Code Competition" error | Run Notebook on Kaggle → "Submit to Competition". **Final Submit is manual** |
+
+#### (a) CSV Competition
 
 ```
 submit/v001_baseline/
-├── notebook.py          # Inference script that can be pasted into a Kaggle Notebook
+├── notebook.py          # Inference script (run locally)
 └── model/               # Trained model files
 ```
 
 - Entry point is `notebook.py`
 - Output is `submission.csv`. Always validate **row count, column names, missing values, value ranges** before submission
 - Only commit `notebook.py` to git
+
+#### (b) Code Competition
+
+```
+submit/v001_baseline/
+├── inference_notebook.py     # jupytext source synced with .ipynb (commit)
+├── inference_notebook.ipynb  # generated from .py (do not commit)
+├── kernel-metadata.json      # Notebook Kaggle metadata (commit)
+├── dataset-metadata.json     # Dataset Kaggle metadata (commit)
+├── upload.sh                 # One-command Dataset create + Notebook push (commit)
+└── kaggle_dataset/           # Dataset upload target (.gitignore)
+    ├── models/
+    └── (trained model files)
+```
+
+- **For the full flow, templates, and gotchas, see `tools/kaggle_code_competition_submission.md`**
+- Flow: `upload.sh` uploads Dataset + pushes Notebook → Save & Run All on Kaggle UI → "Submit to Competition" (manual)
+- Required: `enable_internet: false` (no pip install), self-contained (no `kernel_sources` imports)
+- Validation: assert format at notebook end (`assert len(sub) == EXPECTED_ROWS` etc.)
+- Embed CV score in `kernel-metadata.json` / `dataset-metadata.json` title (so the weight version is identifiable at a glance)
 
 ### Non-Kaggle (grand-challenge.org / CodaBench / custom sites)
 

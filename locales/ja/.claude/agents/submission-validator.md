@@ -12,13 +12,14 @@ model: sonnet
 
 ### 0. 形式判定
 `KAGGLE_DIRECTION.md` を読み、対象コンペの提出形式を判定する:
-- (A) Kaggle CSV型
+- (A) Kaggle CSV Competition 型（`submission.csv` を直接 upload）
+- (A') Kaggle **Code Competition** 型（Notebook 経由提出。**フローは別物**）
 - (B) 予測ファイル zip 型（grand-challenge.org / CodaBench など）
 - (C) Docker コンテナ型（grand-challenge.org の algorithm container など）
 
-判定できなければユーザーに確認する。
+判定できなければユーザーに確認する。Kaggle の場合、CSV か Code かは Rules ページの "Submissions are made from Kaggle Notebooks" の有無 / `kaggle competitions submit` が通るかで切り分け。
 
-### 1. (A) Kaggle CSV 型のチェック
+### 1. (A) Kaggle CSV Competition 型のチェック
 - `submission.csv` を生成
 - pandas で読み込み、以下を assert:
   - 行数 == sample_submission.csv の行数
@@ -28,6 +29,31 @@ model: sonnet
   - dtype（id 列の文字列、target 列の数値型）
 - ファイルサイズが Kaggle の上限（通常数百MB）以内
 - BOM なし、改行コード LF
+
+### 1'. (A') Kaggle Code Competition 型のチェック
+
+参考: `tools/kaggle_code_competition_submission.md`
+
+- 必須ファイルが揃っているか:
+  - [ ] `inference_notebook.py` または `inference_notebook.ipynb`
+  - [ ] `kernel-metadata.json`
+  - [ ] `dataset-metadata.json`
+  - [ ] `upload.sh`
+- `kernel-metadata.json` の必須項目:
+  - [ ] `enable_internet: false`（pip install 不可なので、Kaggle に最初から入っている library のみ使う）
+  - [ ] `competition_sources` に正しい競技スラッグ
+  - [ ] `dataset_sources` に学習済みモデル Dataset の slug
+  - [ ] `kernel_sources` が空 or 必要最小限（基本は self-contained）
+- `dataset-metadata.json`:
+  - [ ] `id` のスラッグが小文字英数とハイフンのみ
+  - [ ] `isPrivate: true`（public は他チームに物理コピーされるため）
+- `inference_notebook.py` の中身:
+  - [ ] Kaggle 環境のパス解決（`/kaggle/input/<comp-slug>` と `/kaggle/input/<dataset-slug>`）
+  - [ ] 出力先 `/kaggle/working/submission.csv`
+  - [ ] 末尾に形式 assert（`assert len(sub) == EXPECTED_ROWS` 等）
+  - [ ] `kernel_sources` 経由の import 不要（self-contained）
+- `kaggle_dataset/` が `.gitignore` 対象になっているか
+- 実アップロードはユーザーが手動。ローカルで `bash upload.sh --dry-run` 等で動作確認のみ
 
 ### 2. (B) 予測ファイル zip 型のチェック
 - `predict.py` または `run.sh` を実行して `output/` を生成
