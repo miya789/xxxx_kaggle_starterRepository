@@ -4,9 +4,9 @@
 Kaggle だけでなく、grand-challenge.org / CodaBench / 独自プラットフォームなど **Kaggle 以外のコンペにも対応** する想定で運用します。
 **判断に迷ったら `KAGGLE_DIRECTION.md` の設計意図を確認すること。**（ファイル名は歴史的経緯で Kaggle のままですが、中身は汎用の設計原則として読む）
 
-## Opus 4.7 (1M context) を使う前提のメタルール
+## Opus (1M context) を使う前提のメタルール
 
-このテンプレートは **Claude Opus 4.7 (1M context)** で運用することを前提にしている。1M コンテキストを活かすため、以下を**遠慮せず**やってよい:
+このテンプレートは **Claude Opus (1M context)** で運用することを前提にしている。1M コンテキストを活かすため、以下を**遠慮せず**やってよい:
 
 - **横断分析**: `daily_reports/*.md` + 全 `workspace/exp*/SESSION_NOTES.md` + `claudeSummary.md` + `submit/SUBMISSIONS.md` を**並列に一括ロード**してから判断する。逐次 read で context を温存しようとしない
 - **コードレビュー**: `src/` 全体 + `config.yaml` + fold 生成スクリプト + `KAGGLE_DIRECTION.md` を**同時に並列ロード**してから整合性を判断する（学習→推論→提出のリーク経路を通しで追う）
@@ -127,6 +127,22 @@ Kaggle だけでなく、grand-challenge.org / CodaBench / 独自プラットフ
     ## 次にやること
     - [ ] TODO
     ```
+
+## ナレッジ蓄積（フロー → ストック）
+
+**作業が増えると知見が膨大になる。時系列ログ（フロー）と蒸留知識（ストック）を分けて貯める。**
+
+| 層 | 置き場 | 性質 |
+|----|--------|------|
+| **フロー** | `daily_reports/YYYYMMDD.md` | 時系列ログ。追記専用・編集しない。「何が起きたか」 |
+| **ストック** | `knowledge/**.md` | 蒸留知識。原子ページ + `INDEX.md` 目次。「今わかっている事」 |
+
+- `knowledge/` は **リポジトリ内の明示的な .md ファイル**（commit して共有する見える資産）。`memory/`（Claude Code のセッション横断メモ）とは別物
+- **原則: まず daily_report に書く → 蒸留して `knowledge/` へ昇格**。フローを飛ばして直接ストックに書かない（出典が消えるため）
+- ページは **1トピック1ファイル**（`technique/` `data/` `error/` `decision/`）。frontmatter + 短い蒸留本文。作法は `knowledge/README.md`、雛形は `knowledge/_template.md`
+- **検索は `INDEX.md` を見てから該当ページだけロード**。全ページ走査しない（context を食わないため）
+- 蓄積・検索・整理は `/wiki`（`add` / `find` / `promote` / `consolidate`）。SessionStart で `INDEX.md` が自動注入される
+- 棄却された知見も `status: rejected` で残す（同じ轍を踏まないため）
 
 ## Fold設計（最重要）
 
@@ -280,7 +296,7 @@ submit/v001_baseline/
 
 `.claude/settings.json` に以下が設定されている。`/hooks` で確認・編集可能:
 
-- **SessionStart**: 最新の `daily_reports/*.md` を context に自動注入する。セッション開始時に状況把握をスキップしないため
+- **SessionStart**: 最新の `daily_reports/*.md` と `knowledge/INDEX.md`（ナレッジ目次）を context に自動注入する。セッション開始時に状況把握とストック知識の所在把握をスキップしないため
 - **Stop**: セッション終了時に今日の日報があれば `<!-- session ended: ... -->` マーカーを追記する。日次の作業ログを残すため
 
 ## 利用可能なSkills
@@ -291,6 +307,7 @@ submit/v001_baseline/
 - `/submit-check <path>` - 提出物の事前検証（Kaggle CSV / 予測ファイル zip / Docker）。提出直前に必ず使う
 - `/strategy [追加観点]` - 横断 synthesis を実行。`competition-strategist` agent が全 daily_report + SESSION_NOTES + claudeSummary を一括ロードして次の一手を出す。週1回や CV 頭打ち時
 - `/survey-papers [キーワード]` - 論文・解法調査（`context: fork` でメインコンテキストを汚さない）
+- `/wiki [add|find|promote|consolidate]` - コンペ知識を `knowledge/` ストック層（原子ページ + INDEX）に蓄積・検索・整理。daily_report のフローから蒸留して昇格。知見が出たとき・週次整理・過去知見を引きたいとき
 
 ## Custom Agents
 

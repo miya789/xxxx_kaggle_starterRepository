@@ -7,6 +7,11 @@
             "type": "command",
             "command": "latest=$(ls -t daily_reports/*.md 2>/dev/null | head -1); if [ -n \"$latest\" ]; then echo \"[Latest daily report: $latest]\"; cat \"$latest\"; else echo \"[No daily report yet. Consider running /daily-report]\"; fi",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "if [ -f knowledge/INDEX.md ]; then echo \"[Knowledge wiki index — load only the pages you need]\"; cat knowledge/INDEX.md; else echo \"[No knowledge wiki yet. Use /wiki to start accumulating distilled knowledge]\"; fi",
+            "timeout": 10
           }
         ]
       }

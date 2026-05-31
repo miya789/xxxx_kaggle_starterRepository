@@ -4,9 +4,9 @@ This repository is an experiment management template for data science competitio
 It supports **Kaggle and non-Kaggle platforms** (grand-challenge.org, CodaBench, custom sites).
 **When in doubt, check the design intent in `KAGGLE_DIRECTION.md`.** (The filename is historical — the content is a general-purpose design guide.)
 
-## Meta-rule: Designed for Opus 4.7 (1M context)
+## Meta-rule: Designed for Opus (1M context)
 
-This template is designed to run on **Claude Opus 4.7 (1M context)**. To leverage that, **don't hold back** on the following:
+This template is designed to run on **Claude Opus (1M context)**. To leverage that, **don't hold back** on the following:
 
 - **Cross-experiment analysis**: Load `daily_reports/*.md` + all `workspace/exp*/SESSION_NOTES.md` + `claudeSummary.md` + `submit/SUBMISSIONS.md` **in parallel** before judging. Don't try to conserve context by reading sequentially
 - **Code review**: Parallel-load `src/`, `config.yaml`, fold generation scripts, and `KAGGLE_DIRECTION.md` **simultaneously** before checking consistency (trace the leakage path end-to-end: training → inference → submission)
@@ -127,6 +127,22 @@ To avoid local optima, bold ideas should be "nobody would normally do that" leve
     ## Next Steps
     - [ ] TODO
     ```
+
+## Knowledge Accumulation (Flow → Stock)
+
+**As work grows, insights pile up. Separate the time-ordered log (flow) from distilled knowledge (stock).**
+
+| Layer | Location | Nature |
+|-------|----------|--------|
+| **Flow** | `daily_reports/YYYYMMDD.md` | Time-ordered log. Append-only, never edited. "What happened" |
+| **Stock** | `knowledge/**.md` | Distilled knowledge. Atomic pages + `INDEX.md`. "What we currently know" |
+
+- `knowledge/` is **explicit in-repo .md files** (a visible asset, committed and shared). Distinct from `memory/` (Claude Code's cross-session private notes)
+- **Principle: write to the daily report first → distill and promote into `knowledge/`.** Never write straight to stock, skipping flow (provenance would be lost)
+- One topic per file (`technique/` `data/` `error/` `decision/`). Frontmatter + short distilled body. Conventions in `knowledge/README.md`, template in `knowledge/_template.md`
+- **Retrieve via `INDEX.md` first, then load only the relevant page.** Don't scan all pages (saves context)
+- Accumulate / search / consolidate with `/wiki` (`add` / `find` / `promote` / `consolidate`). `INDEX.md` is auto-injected at SessionStart
+- Keep rejected insights too, as `status: rejected` (so the same mistake isn't repeated)
 
 ## Fold Design (Critical)
 
@@ -280,7 +296,7 @@ Order: Read outputs → Identify what's wrong → Address the cause → Verify w
 
 `.claude/settings.json` ships with these hooks. Inspect/edit via `/hooks`:
 
-- **SessionStart**: Auto-inject the latest `daily_reports/*.md` into context. Ensures you never skip status check at session start
+- **SessionStart**: Auto-inject the latest `daily_reports/*.md` and `knowledge/INDEX.md` (the knowledge index) into context. Ensures you never skip status check or lose track of where stock knowledge lives
 - **Stop**: When the session ends, append a `<!-- session ended: ... -->` marker to today's daily report (if it exists). Keeps a daily activity log
 
 ## Available Skills
@@ -291,6 +307,7 @@ Order: Read outputs → Identify what's wrong → Address the cause → Verify w
 - `/submit-check <path>` - Pre-submission validation (Kaggle CSV / prediction zip / Docker). Use right before any submission
 - `/strategy [focus]` - Cross-experiment synthesis. The `competition-strategist` agent loads all daily reports + SESSION_NOTES + claudeSummary in parallel and proposes next moves. Use weekly or when CV plateaus
 - `/survey-papers [keyword]` - Paper/solution survey (runs in `context: fork` without polluting main context)
+- `/wiki [add|find|promote|consolidate]` - Accumulate / search / consolidate competition knowledge in the `knowledge/` stock layer (atomic pages + INDEX). Distill and promote from the daily-report flow. Use when an insight emerges, for weekly cleanup, or to recall past knowledge
 
 ## Custom Agents
 

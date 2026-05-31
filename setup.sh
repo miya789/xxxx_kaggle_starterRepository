@@ -42,12 +42,23 @@ mkdir -p "$SCRIPT_DIR/.claude/skills/exp-new"
 mkdir -p "$SCRIPT_DIR/.claude/skills/submit-check"
 mkdir -p "$SCRIPT_DIR/.claude/skills/daily-report"
 mkdir -p "$SCRIPT_DIR/.claude/skills/strategy"
+mkdir -p "$SCRIPT_DIR/.claude/skills/wiki"
 cp "$LOCALE_DIR/.claude/skills/survey-papers/SKILL.md" "$SCRIPT_DIR/.claude/skills/survey-papers/SKILL.md"
 cp "$LOCALE_DIR/.claude/skills/onboard/SKILL.md" "$SCRIPT_DIR/.claude/skills/onboard/SKILL.md"
 cp "$LOCALE_DIR/.claude/skills/exp-new/SKILL.md" "$SCRIPT_DIR/.claude/skills/exp-new/SKILL.md"
 cp "$LOCALE_DIR/.claude/skills/submit-check/SKILL.md" "$SCRIPT_DIR/.claude/skills/submit-check/SKILL.md"
 cp "$LOCALE_DIR/.claude/skills/daily-report/SKILL.md" "$SCRIPT_DIR/.claude/skills/daily-report/SKILL.md"
 cp "$LOCALE_DIR/.claude/skills/strategy/SKILL.md" "$SCRIPT_DIR/.claude/skills/strategy/SKILL.md"
+cp "$LOCALE_DIR/.claude/skills/wiki/SKILL.md" "$SCRIPT_DIR/.claude/skills/wiki/SKILL.md"
+
+# Copy knowledge-wiki scaffolding (docs are safe to refresh; INDEX is user content -> seed only if missing)
+mkdir -p "$SCRIPT_DIR/knowledge/technique" "$SCRIPT_DIR/knowledge/data" \
+         "$SCRIPT_DIR/knowledge/error" "$SCRIPT_DIR/knowledge/decision"
+cp "$LOCALE_DIR/knowledge/README.md" "$SCRIPT_DIR/knowledge/README.md"
+cp "$LOCALE_DIR/knowledge/_template.md" "$SCRIPT_DIR/knowledge/_template.md"
+if [ ! -f "$SCRIPT_DIR/knowledge/INDEX.md" ]; then
+    cp "$LOCALE_DIR/knowledge/INDEX.md" "$SCRIPT_DIR/knowledge/INDEX.md"
+fi
 
 # Copy templates
 cp "$LOCALE_DIR/submit/SUBMISSIONS.md" "$SCRIPT_DIR/submit/SUBMISSIONS.md"
@@ -58,5 +69,6 @@ echo "Files updated:"
 echo "  - CLAUDE.md"
 echo "  - KAGGLE_DIRECTION.md"
 echo "  - .claude/agents/*.md (5 agents)"
-echo "  - .claude/skills/*/SKILL.md (6 skills)"
+echo "  - .claude/skills/*/SKILL.md (7 skills)"
+echo "  - knowledge/ (wiki scaffolding; INDEX.md seeded only if missing)"
 echo "  - submit/SUBMISSIONS.md"
