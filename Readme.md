@@ -1,6 +1,6 @@
 # Competition Experiment Template
 
-**v2.4.1**
+**v2.5.0**
 
 > Supports **Kaggle** and **non-Kaggle** competitions (grand-challenge.org, CodaBench, custom platforms).
 > Designed for **Claude Opus (1M context)**.
@@ -252,6 +252,7 @@ Claude Code を前提に、**データ取得 → EDA → 調査（論文/類似�
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.5.0 | 2026-06-06 | Add **`docker/` closed-environment image**: `Dockerfile` (PyTorch 2.7.1 / CUDA 12.8 base + ML stack + Claude Code CLI, baked into one distributable image; `UID`/`GID` parametrized via build args) and beginner-friendly `build.sh` (inherits host `UID`/`GID` to avoid bind-mount ownership mismatches). Make `rundocker.sh` portable for distribution: `--gpus all` only when `nvidia-smi` exists (CPU-only hosts still launch), GUI (X11/WSLg) mounts only when present, drives auto-detected from `/mnt/<letter>` or `EXTRA_MOUNTS` (drops hardcoded `/mnt/d,e,j`). Preventively harden `.gitignore` for the HOME-mount workflow (no secrets were ever tracked; this guards credential files that *would* be created once you authenticate inside the container): whitelist `.claude/` (track only `agents/` `skills/` `settings.json`, auto-ignore credentials/history Claude Code writes), and block `.kaggle/` / `kaggle.json` / SSH keys (`id_rsa`, `*.pem`, `*.key`) / `.npm/` / `.bash_history` |
 | v2.4.1 | 2026-06-01 | Add **external-GPU (RunPod) ops tooling** at `tools/runpod/` (verified on runpodctl 2.3.0): connect / Secrets-based key handling / cost auto-stop / storage 3-tier (Kaggle = source of truth, Network Volume = scratch), plus `runpod_ops.py` / `smoke_test.sh` / `startup.sh` / `.runpod.env.example`. `.gitignore` protects `*.env` while keeping `*.env.example`. CLAUDE.md notes external GPU under background execution. Includes a real-hardware-verified recipe (§9.5: Kaggle dataset → RunPod model training) and confirms `{{ RUNPOD_SECRET_x }}` is NOT resolved via CLI/SDK (inject keys via scp) |
 | v2.4.0 | 2026-05-31 | Add **knowledge wiki (stock layer)**: `knowledge/` with `INDEX.md` retrieval index + atomic pages (`technique/` `data/` `error/` `decision/`), new `/wiki` skill (add / find / promote / consolidate), SessionStart auto-injects `INDEX.md`. Separates flow (`daily_reports/`) from stock (distilled, reusable knowledge). Make the Opus version label version-agnostic ("Opus (1M context)"); agents keep the `model: opus` alias |
 | v2.3.2 | 2026-05-13 | Add **Kaggle Code Competition** support: full submission flow guide at `tools/kaggle_code_competition_submission.md`. CLAUDE.md distinguishes CSV vs Code Competition. `submission-validator` agent gains (A') Code Competition checks. `submit/` naming convention bumped: include source exp folder (e.g., `v001_expA02_super_clone`) |

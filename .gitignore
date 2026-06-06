@@ -203,3 +203,37 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# ── Secrets / credentials（絶対にコミットしない） ─────────────────────────────
+# rundocker.sh は作業フォルダをコンテナの HOME(/home/user) にマウントするため、
+# 認証用 dotfile（kaggle.json / .credentials.json 等）がリポジトリ直下に実体化する。
+# 事故防止のため広めに無視する。
+#
+# .claude はホワイトリスト方式: 配下は原則無視し、追跡対象（agents/skills/
+# settings.json）だけ明示的に復活させる。→ Claude Code が後から吐く認証・履歴系
+# ファイル（.credentials.json / projects/ / history 等）は自動で除外される。
+.claude/*
+!.claude/agents/
+!.claude/skills/
+!.claude/settings.json
+
+# Kaggle 認証
+.kaggle/
+kaggle.json
+
+# npm / シェル履歴（HOME マウントで紛れ込む）
+.npm/
+.bash_history
+
+# SSH / 秘密鍵・証明書
+.ssh/
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.credentials.json
+.credentials.json
