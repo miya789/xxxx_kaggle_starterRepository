@@ -1,6 +1,6 @@
 # Competition Experiment Template
 
-**v2.5.0**
+**v2.5.1**
 
 > Supports **Kaggle** and **non-Kaggle** competitions (grand-challenge.org, CodaBench, custom platforms).
 > Designed for **Claude Opus (1M context)**.
@@ -38,7 +38,16 @@ This template supports **Japanese** and **English**. Run the setup script to swi
 ./setup.sh ja   # Japanese (default)
 ```
 
-This updates: `CLAUDE.md`, `KAGGLE_DIRECTION.md`, agent definitions, skill definitions, and templates.
+This updates: `CLAUDE.md`, `KAGGLE_DIRECTION.md`, agent definitions, skill definitions, and templates. It also enables the secret-blocking git pre-commit hook (`core.hooksPath=tools/git-hooks`) — or enable it manually with `bash tools/git-hooks/install.sh`. The hook is local config, so run this once per clone.
+
+#### Run in a closed Docker environment (optional)
+
+```bash
+bash docker/build.sh    # build the "claude" image (PyTorch + ML stack + Claude Code CLI)
+bash rundocker.sh       # launch a container with the repo mounted
+```
+
+`build.sh` inherits the host `UID`/`GID`; `rundocker.sh` is portable (GPU only when `nvidia-smi` exists, GUI/drives mounted only when present, extra mounts via `EXTRA_MOUNTS`).
 
 ### Features
 
@@ -104,6 +113,8 @@ This updates: `CLAUDE.md`, `KAGGLE_DIRECTION.md`, agent definitions, skill defin
 ├── claudeSummary.md                  # Cross-experiment insights
 ├── myMemo.md                         # Personal notes
 ├── setup.sh                          # Language setup script
+├── rundocker.sh                      # Launch the closed Docker env (portable)
+├── docker/                           # Closed-env image (Dockerfile + build.sh)
 ├── locales/                          # Language files
 │   ├── ja/                           # Japanese
 │   └── en/                           # English
@@ -114,6 +125,7 @@ This updates: `CLAUDE.md`, `KAGGLE_DIRECTION.md`, agent definitions, skill defin
 ├── tools/
 │   ├── kaggle_elapsed_time.py        # Submission monitoring
 │   ├── kaggle_upload.sh              # Dataset upload
+│   ├── git-hooks/                    # Secret-blocking pre-commit hook (+ install.sh)
 │   └── runpod/                       # External-GPU (RunPod) ops guide + scripts
 ├── submit/
 │   └── SUBMISSIONS.md                # Submission history
@@ -144,8 +156,9 @@ Claude Code を前提に、**データ取得 → EDA → 調査（論文/類似�
 
 ### クイックスタート
 1. このリポジトリをfork
-2. KAGGLE_DIRECTION.md に対象コンペURLを記入
-3. Claude Code で作業開始
+2. `./setup.sh ja` で日本語セットアップ（pre-commit フックも自動有効化）
+3. KAGGLE_DIRECTION.md に対象コンペURLを記入
+4. Claude Code で作業開始
 
 ### 機能一覧
 
@@ -211,6 +224,8 @@ Claude Code を前提に、**データ取得 → EDA → 調査（論文/類似�
 ├── claudeSummary.md                  # 実験横断の知見集約
 ├── myMemo.md                         # 個人メモ
 ├── setup.sh                          # 言語設定スクリプト
+├── rundocker.sh                      # 閉じた Docker 環境を起動（配布対応）
+├── docker/                           # 閉じた環境イメージ (Dockerfile + build.sh)
 ├── locales/                          # 言語ファイル
 │   ├── ja/                           # 日本語
 │   └── en/                           # English
@@ -221,6 +236,7 @@ Claude Code を前提に、**データ取得 → EDA → 調査（論文/類似�
 ├── tools/
 │   ├── kaggle_elapsed_time.py        # 提出監視
 │   ├── kaggle_upload.sh              # Dataset アップロード
+│   ├── git-hooks/                    # 秘密混入を止める pre-commit フック (+ install.sh)
 │   └── runpod/                       # 外部GPU(RunPod)運用ガイド + スクリプト
 ├── submit/
 │   └── SUBMISSIONS.md                # 提出履歴
@@ -252,6 +268,7 @@ Claude Code を前提に、**データ取得 → EDA → 調査（論文/類似�
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.5.1 | 2026-06-07 | Add **secret-blocking git pre-commit hook** (idiot-proofing) at `tools/git-hooks/`: blocks commits touching credential paths (`.kaggle/`, `kaggle.json`, `.credentials.json`, SSH keys, `*.env`, …) or containing token patterns (PRIVATE KEY / AWS / GitHub PAT / Hugging Face / Google API / Slack); `*.example` is exempt, binary/>1MB skipped, NUL-safe for spaced/non-ASCII filenames; bypass via `ALLOW_SECRETS=1` / `--no-verify`. Distributed via `core.hooksPath` (tracked `install.sh`; `setup.sh` auto-enables; per-clone activation required). Also extend `rundocker.sh`: pass `HF_TOKEN` from `~/.hf_token`, and selectable `KAGGLE_INSTALL=skip/always/no` |
 | v2.5.0 | 2026-06-06 | Add **`docker/` closed-environment image**: `Dockerfile` (PyTorch 2.7.1 / CUDA 12.8 base + ML stack + Claude Code CLI, baked into one distributable image; `UID`/`GID` parametrized via build args) and beginner-friendly `build.sh` (inherits host `UID`/`GID` to avoid bind-mount ownership mismatches). Make `rundocker.sh` portable for distribution: `--gpus all` only when `nvidia-smi` exists (CPU-only hosts still launch), GUI (X11/WSLg) mounts only when present, drives auto-detected from `/mnt/<letter>` or `EXTRA_MOUNTS` (drops hardcoded `/mnt/d,e,j`). Preventively harden `.gitignore` for the HOME-mount workflow (no secrets were ever tracked; this guards credential files that *would* be created once you authenticate inside the container): whitelist `.claude/` (track only `agents/` `skills/` `settings.json`, auto-ignore credentials/history Claude Code writes), and block `.kaggle/` / `kaggle.json` / SSH keys (`id_rsa`, `*.pem`, `*.key`) / `.npm/` / `.bash_history` |
 | v2.4.1 | 2026-06-01 | Add **external-GPU (RunPod) ops tooling** at `tools/runpod/` (verified on runpodctl 2.3.0): connect / Secrets-based key handling / cost auto-stop / storage 3-tier (Kaggle = source of truth, Network Volume = scratch), plus `runpod_ops.py` / `smoke_test.sh` / `startup.sh` / `.runpod.env.example`. `.gitignore` protects `*.env` while keeping `*.env.example`. CLAUDE.md notes external GPU under background execution. Includes a real-hardware-verified recipe (§9.5: Kaggle dataset → RunPod model training) and confirms `{{ RUNPOD_SECRET_x }}` is NOT resolved via CLI/SDK (inject keys via scp) |
 | v2.4.0 | 2026-05-31 | Add **knowledge wiki (stock layer)**: `knowledge/` with `INDEX.md` retrieval index + atomic pages (`technique/` `data/` `error/` `decision/`), new `/wiki` skill (add / find / promote / consolidate), SessionStart auto-injects `INDEX.md`. Separates flow (`daily_reports/`) from stock (distilled, reusable knowledge). Make the Opus version label version-agnostic ("Opus (1M context)"); agents keep the `model: opus` alias |
