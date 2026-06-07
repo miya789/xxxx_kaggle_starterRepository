@@ -63,6 +63,13 @@ fi
 # Copy templates
 cp "$LOCALE_DIR/submit/SUBMISSIONS.md" "$SCRIPT_DIR/submit/SUBMISSIONS.md"
 
+# Enable the secret-blocking pre-commit hook (idiot-proofing) if this is a git repo
+if git -C "$SCRIPT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    chmod +x "$SCRIPT_DIR/tools/git-hooks/pre-commit" 2>/dev/null || true
+    git -C "$SCRIPT_DIR" config core.hooksPath "tools/git-hooks"
+    echo "Enabled git pre-commit hook (blocks committing secrets): core.hooksPath=tools/git-hooks"
+fi
+
 echo "Done! Language set to: $LANG"
 echo ""
 echo "Files updated:"
