@@ -34,13 +34,26 @@ if [ -d "${SHARED_KAGGLE}" ]; then
   KAGGLE_OPTS=(-v "${SHARED_KAGGLE}:${CONTAINER_HOME}/.kaggle:ro")
 fi
 
-# ── kaggle CLI：フォルダごとに都度インストール（~/.local に入り2回目以降スキップ）──
-KAGGLE_VERSION="${KAGGLE_VERSION:-1.6.17}"
-if [ -n "${KAGGLE_VERSION}" ]; then
-  START_CMD="python -c 'import kaggle' 2>/dev/null || pip install kaggle==${KAGGLE_VERSION}; exec bash"
-else
-  START_CMD="exec bash"
+# ── Hugging Face トークン：WSL 側のファイルに1回置いて、毎回 HF_TOKEN として渡す ──
+#   事前準備（WSL 側で1回だけ）:
+#     printf '%s' 'hf_xxxxxxxx' > ~/.hf_token && chmod 600 ~/.hf_token
+#   huggingface_hub / transformers / datasets は HF_TOKEN を自動で認証に使う。
+HF_TOKEN_FILE="${HF_TOKEN_FILE:-$HOME/.hf_token}"
+HF_OPTS=()
+if [ -f "${HF_TOKEN_FILE}" ]; then
+  HF_OPTS=(-e "HF_TOKEN=$(tr -d '[:space:]' < "${HF_TOKEN_FILE}")")
 fi
+
+# ── kaggle CLI：フォルダごとにインストール（~/.local に入る）──────────────────
+#   KAGGLE_INSTALL=skip   : 未導入なら最新を入れる／導入済みならスキップ（既定・速い）
+#   KAGGLE_INSTALL=always : 毎回 pip install -U で最新へ更新（要ネット・数秒）
+#   KAGGLE_INSTALL=no     : インストールしない
+KAGGLE_INSTALL="${KAGGLE_INSTALL:-skip}"
+case "${KAGGLE_INSTALL}" in
+  always) START_CMD="pip install -U kaggle; exec bash" ;;
+  no)     START_CMD="exec bash" ;;
+  *)      START_CMD="python -c 'import kaggle' 2>/dev/null || pip install -U kaggle; exec bash" ;;
+esac
 
 # ── GPU：nvidia-smi がある時だけ --gpus all を付ける（GPU 無し環境でも起動できる）──
 GPU_OPTS=()
