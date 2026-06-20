@@ -34,6 +34,19 @@ fi
 NAME="$(basename "${HOST_DIR}")"
 WORKDIR_IN="/work/${NAME}"
 
+# ── 会話履歴＆メモリ(projects/)は作業フォルダ内に隔離（認証は共通のまま）──
+#   ・履歴/メモリは <作業フォルダ>/.claude-data/projects/ に保存 → コンテナ間で覗けない。
+#   ・初回のみ共通(.claude-docker)から該当プロジェクト分を引っ越し（以後は分離管理）。
+#   ※ PROJ_KEY は Claude のエンコード規則（cwd の非英数字を '-' に置換）に合わせて
+#     WORKDIR_IN から導出する。"-work-${NAME}" だと '_'/'.'/空白等が残ってキー不一致になる。
+PROJ_DATA="${HOST_DIR}/.claude-data/projects"
+PROJ_KEY="$(printf '%s' "${WORKDIR_IN}" | sed 's/[^a-zA-Z0-9]/-/g')"
+mkdir -p "${PROJ_DATA}"
+if [ ! -e "${PROJ_DATA}/${PROJ_KEY}" ] && [ -e "${SHARED_CLAUDE}/projects/${PROJ_KEY}" ]; then
+  cp -a "${SHARED_CLAUDE}/projects/${PROJ_KEY}" "${PROJ_DATA}/${PROJ_KEY}"
+fi
+CLAUDE_OPTS+=(-v "${PROJ_DATA}:${CLAUDE_CFG}/projects")
+
 # ── Kaggle 認証：WSL に1回置いて毎回マウント共有（存在するときだけ・読み取り専用）──
 SHARED_KAGGLE="${SHARED_KAGGLE:-$HOME/.kaggle}"
 KAGGLE_OPTS=()

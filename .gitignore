@@ -221,6 +221,10 @@ cython_debug/
 !.claude/skills/
 !.claude/settings.json
 
+# 会話履歴＆メモリの隔離先（rundocker.sh が <作業フォルダ>/.claude-data/projects に
+# Claude の projects/ をマウントする。履歴・メモリの実体なので絶対にコミットしない）
+.claude-data/
+
 # Kaggle 認証
 .kaggle/
 kaggle.json
