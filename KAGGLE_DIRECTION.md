@@ -4,7 +4,7 @@ CLAUDE.md と合わせてルールを確認してください。
 
 対象コンペはこれです。
 コンペ名：
-URL：
+URL：https://www.kaggle.com/competitions/pokemon-tcg-ai-battle
 締切 / タイムライン：
 評価指標：
 
